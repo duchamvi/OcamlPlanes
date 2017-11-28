@@ -8,7 +8,6 @@ open Types
 (* Reglages *)
 type environnement = {
   dseparation: float;
-  conflict_clusters: avion array array;
 }
 
 		       
@@ -18,17 +17,17 @@ let distance = fun a b ->
   let ya = float a.y in
   let xb = float b.x in
   let yb = float b.y in
-  ((xa -. xb)**2. +. (ya -. yb)**2.)**0.5;;
+  ((xa -. xb)**2. +. (ya -. yb)**2.)**0.5
 
 let vitesse = fun a ->
   (** returns the speed at the point a  *)
   let vxa = float a.vx in
   let vya = float a.vy in
-  (vxa**2. +. vya**2.)**0.5;;
+  (vxa**2. +. vya**2.)**0.5
 
-let assemble = fun env ->
-  (** assembles the conclict clusters together *)
-  ();;0
+let assemble = fun known_clusters new_clusters ->
+  (** assembles the conclict clusters together A AMELIORER*)
+  Array.append known_clusters new_clusters
 
 let compare_tuple = fun elt tuple ->
     match tuple with
@@ -47,7 +46,7 @@ let common_beacon = fun p1 p2 ->
        else
 	 cbrec reste balises2 communes					 
   in
-  cbrec p1.liste_balises p2.liste_balises balises_communes;;
+  cbrec p1.liste_balises p2.liste_balises balises_communes
 
 let pointproche = fun tabpoints t ->
   (** Trouve le point le plus proche du temps t dans la liste *)
@@ -59,7 +58,7 @@ let pointproche = fun tabpoints t ->
     then
       pointfound := pointobs
   done;
-  !pointfound;;
+  !pointfound
 
 let selectpoint = fun t1 t2 point ->
   (** renvoie le point dans un array s'il est entre t1 et t2 *)
@@ -69,43 +68,55 @@ let selectpoint = fun t1 t2 point ->
   else
     [||]
   
-let local_detection = fun env p1 p2 beacon ->
+let local_detection = fun env p1 p2 beacon already_found ->
   (** detects if p1 and p2 are in conflict near the beacon *)
-  let t1 = List.assoc beacon p1.liste_balises in
-  let deltat = int_of_float (env.dseparation /. (vitesse p1.tableau_point4D.(0))) in
-  (* 
-     algo :
-     on se limite à un groupe de points proches de la balise 
-   *)
-  let points1intermediaire = Array.map (selectpoint (t1 - deltat) (t1 + deltat)) p1.tableau_point4D in
-  let points1 = Array.fold_right Array.append points1intermediaire [||] in
-  
-  (*
+  if already_found
+  then
+    already_found
+  else
+    let t1 = List.assoc beacon p1.liste_balises in
+    let deltat = int_of_float (env.dseparation /. (vitesse p1.tableau_point4D.(0))) in
+    (* on se limite à un groupe de points proches de la balise *)
+    let points1intermediaire = Array.map (selectpoint (t1 - deltat) (t1 + deltat)) p1.tableau_point4D in
+    let points1 = Array.fold_right Array.append points1intermediaire [||] in
+    (*
      on compare un point avec celui de temps inferieur et celui de temps superieur de l'autre avion
      on renvoie des groupes en conflit (array de array a priori)
-   *)
-  ();;
+     *)
+    let counter = ref (Array.length points1) in
+    let conflict_found = ref false in
+    while !counter > 0 && not !conflict_found
+    do
+      counter := !counter -1;
+      let pointp1 = points1.(!counter) in
+      let pointp2 = pointproche p2.tableau_point4D pointp1.temps in 
+      if distance pointp1 pointp2 < env.dseparation
+      then
+	conflict_found := true;
+    done;
+    !conflict_found
 
-let two_planes_detection = fun env p1 p2 ->
-  (** Detects a conflict between p1 and p2 and adds it to the conflictclusters *)
+let two_planes_detection = fun env p1 p2 conflict_clusters ->
+  (** Detects a conflict between p1 and p2 and adds it to a cluster *)
   if p1.fl = p2.fl
   then
     let communes = common_beacon p1 p2 in
-    if communes != [||]
+    if communes = [||]
     then
-      Array.iter (local_detection env p1 p2) communes
+      conflict_clusters
     else
-      ()
+      if  Array.fold_right (local_detection env p1 p2) communes false
+      then
+	Array.append conflict_clusters [| p1; p2|]
+      else
+	conflict_clusters
   else
-    ();;
-
-let one_plane_detection = fun p planesinactivity env ->
-  (** actualises the conflicts clusters with the new plane *)
-  Array.iter (two_planes_detection env p) planesinactivity;
- (*
-    If a plane shares a FL and a beacon with p, find whether it's in conflict with p, and actualises the conflict clusters
-  *)
-  assemble env;;
+    conflict_clusters
+    
+let added_plane_detection = fun p planesinactivity env known_conflicts ->
+  (** returns the conflicts clusters with the new plane *)
+  let new_conflicts = Array.fold_right (two_planes_detection env p) planesinactivity [||] in
+  assemble known_conflicts new_conflicts
 
 let () =
   Printf.printf "ok"
