@@ -107,7 +107,7 @@ let two_planes_detection = fun env p1 p2 conflict_clusters ->
     else
       if  Array.fold_right (local_detection env p1 p2) communes false
       then
-	Array.append conflict_clusters [| p1; p2|]
+	Array.append conflict_clusters [|[| p1; p2|]|]
       else
 	conflict_clusters
   else
@@ -119,4 +119,22 @@ let added_plane_detection = fun p planesinactivity env known_conflicts ->
   assemble known_conflicts new_conflicts
 
 let () =
-  Printf.printf "ok"
+  let conflict_clusters = ref [||] in
+  let env = {dseparation=5. *. 64.} in
+  (* avions *)
+  let a1 = {nom="a1";liste_balises=[("b",1)];tableau_point4D=[|{x=50;y=50;fl=1;temps=1;vx=1;vy=0};{x=1;y=1;fl=1;temps=1;vx=1;vy=0}|]; fl=1} in
+  let planesinactivity = ref [|a1|] in
+  let a2 = {nom="a2";liste_balises=[("a",1);("b",1)];tableau_point4D=[|{x=100;y=100;fl=1;temps=1;vx=1;vy=0};{x=1;y=1;fl=1;temps=1;vx=1;vy=0}|]; fl=1} in
+  let a3 = {nom="a3";liste_balises=[("a",1)];tableau_point4D=[|{x=100;y=100;fl=1;temps=1;vx=1;vy=0};{x=10000;y=10000;fl=1;temps=1;vx=1;vy=0}|]; fl=1} in
+
+  (* detection *)
+  let ajout = fun a -> added_plane_detection a !planesinactivity env !conflict_clusters in
+  
+  conflict_clusters := ajout a2;
+  planesinactivity := Array.append !planesinactivity [|a2|];
+  conflict_clusters := ajout a3;
+
+  Array.iter (fun x -> Printf.printf "(%s;%s)\n" x.(0).nom x.(1).nom) !conflict_clusters
+	     
+ 
+			
