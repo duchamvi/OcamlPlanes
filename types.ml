@@ -12,9 +12,9 @@ type avion = {
     liste_balises : (string*int) list;(*nom balise , temps*)
     balisesmoins5 : (string*int) list;(*nom balise , temps*)
     balisesplus5 : (string*int) list;(*nom balise , temps*)
-    tableau_point4D : point array;
-    trajmoins5 : point array;
-    trajplus5 : point array;
+    tableau_point4D : point list;
+    trajmoins5 : point list;
+    trajplus5 : point list;
     fl : int;
   };;
 

@@ -56,28 +56,28 @@ let common_beacon = fun p1 p2 ->
   cbrec p1.liste_balises p2.liste_balises balises_communes
 
 	
-let pointproche = fun tabpoints t ->
-  (** Trouve le point le plus proche du temps t dans la liste A AMELIORER
+let pointproche = fun listpoints t ->
+  (** Trouve le point le plus proche du temps t dans la liste
    used by local_detection *)
-  let pointfound = ref tabpoints.(0) in
-  for i=0 to Array.length tabpoints -1
-  do
-    let pointobs = tabpoints.(i) in
-    if abs (t - pointobs.temps) < abs (t - (!pointfound).temps)
-    then
-      pointfound := pointobs
-  done;
-  !pointfound
+  let rec pprec = fun pt lpoints ->
+    match lpoints with
+      [] -> pt
+    | x::xs -> if abs (t - x.temps) < abs (t - pt.temps)
+	       then
+		 pprec x xs
+	       else
+		 pprec pt xs in
+  pprec (List.hd listpoints) listpoints
 
-   
+	
 let selectpoint = fun t1 t2 point ->
-  (** renvoie le point dans un array s'il est entre t1 et t2
+  (** renvoie le point dans une liste s'il est entre t1 et t2
    used by local_detection *)
-  if t1 < point.temps && point.temps < t2
+  if (t1 < point.temps) && (point.temps < t2)
   then
-    [| point |]
+    [ point ]
   else
-    [||]
+    []
 
       
 let local_detection = fun env p1 p2 beacon already_found ->
@@ -92,30 +92,25 @@ let local_detection = fun env p1 p2 beacon already_found ->
 
     (* on selectionne l'intervalle de temps A COMPLETER : on doit ajouter des choix selon les vitesses traitees Idee : choix transmis dans l'env *)
     let t1 = List.assoc beacon p1.liste_balises in
-    let deltat = int_of_float (env.dseparation /. (vitesse p1.tableau_point4D.(0))) in
+    let deltat = int_of_float (env.dseparation /. (vitesse (List.hd p1.tableau_point4D))) in
 
     (* on prend les points dans cet intervalle A COMPLETER : on doit ajouter des choix selon les vitesses traitees *)
-    let points1intermediaire = Array.map (selectpoint (t1 - deltat) (t1 + deltat)) p1.tableau_point4D in
-    let points1 = Array.fold_right Array.append points1intermediaire [||] in
-    
+    let points1intermediaire = List.map (selectpoint (t1 - deltat) (t1 + deltat)) p1.tableau_point4D in
+    let points1 = List.fold_right List.append points1intermediaire [] in
+    let points2 = p2.tableau_point4D in
     (*
      on compare un point avec celui le plus proche temporellement de l'autre avion
      on renvoie true en cas de conflit
      *)
-    let counter = ref (Array.length points1) in
-    let conflict_found = ref false in
-    while !counter > 0 && not !conflict_found
-    do
-      counter := !counter -1;
-      let pointp1 = points1.(!counter) in
-      let pointp2 = pointproche p2.tableau_point4D pointp1.temps in 
-      if distance pointp1 pointp2 < env.dseparation
-      then
-	conflict_found := true;
-    done;
-    !conflict_found
+    let rec loc_detec_rec = fun listepoints1 ->
+      match listepoints1 with
+	[] -> false
+      | x::xs -> let pointp2 = pointproche points2 x.temps in
+		 (distance x pointp2 < env.dseparation) || loc_detec_rec xs
+    in
+    loc_detec_rec points1
+		      
 
-     
 let two_planes_detection = fun env p1 p2 conflict_clusters ->
   (** Detects a conflict between p1 and p2 and adds it to a cluster. 
    used by added_plane_detection *)
@@ -147,7 +142,7 @@ let () =
   let env = {dseparation=5. *. 64.} in
   
   (* creation des avions de test*)
-  let traj1 = [|{x=50;y=50;z=1;temps=1;vx=1;vy=0};{x=1;y=1;z=1;temps=1;vx=1;vy=0}|] in
+  let traj1 = [{x=50;y=50;z=1;temps=1;vx=1;vy=0};{x=1;y=1;z=1;temps=1;vx=1;vy=0}] in
   let balises1 = [("b",1)] in
   let a1 = {nom="a1";
 	    liste_balises=balises1;
@@ -160,7 +155,7 @@ let () =
   
   let planesinactivity = ref [|a1|] in
 
-  let traj2 = [|{x=100;y=100;z=1;temps=1;vx=1;vy=0};{x=1;y=1;z=1;temps=1;vx=1;vy=0}|] in
+  let traj2 = [{x=100;y=100;z=1;temps=1;vx=1;vy=0};{x=1;y=1;z=1;temps=1;vx=1;vy=0}] in
   let balises2 = [("a",1);("b",1)] in
   let a2 = {nom="a2";
 	    liste_balises=balises2;
@@ -171,7 +166,7 @@ let () =
 	    trajplus5=traj2;
 	    fl=1} in
   
-  let traj3 = [|{x=100;y=100;z=1;temps=1;vx=1;vy=0};{x=10000;y=10000;z=1;temps=1;vx=1;vy=0}|] in
+  let traj3 = [{x=100;y=100;z=1;temps=1;vx=1;vy=0};{x=10000;y=10000;z=1;temps=1;vx=1;vy=0}] in
   let balises3 = [("a",1)] in
   let a3 = {nom="a3";
 	    liste_balises=balises3;
