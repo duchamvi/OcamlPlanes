@@ -79,6 +79,17 @@ let selectpoint = fun t1 t2 point ->
   else
     []
 
+let selectinterval = fun t1 t2 liste_points ->
+  let rec interval_rec = fun lorigine ldestination ->
+    match lorigine with
+      [] -> List.rev ldestination
+    | x::xs -> if (t1 < x.temps) && (x.temps < t2)
+	       then
+		 interval_rec xs (x::ldestination)
+	       else
+		 interval_rec xs ldestination
+  in
+  interval_rec liste_points []
       
 let local_detection = fun env p1 p2 beacon already_found ->
   (** detects if p1 and p2 are in conflict near the beacon.
@@ -95,9 +106,10 @@ let local_detection = fun env p1 p2 beacon already_found ->
     let deltat = int_of_float (env.dseparation /. (vitesse (List.hd p1.tableau_point4D))) in
 
     (* on prend les points dans cet intervalle A COMPLETER : on doit ajouter des choix selon les vitesses traitees *)
-    let points1intermediaire = List.map (selectpoint (t1 - deltat) (t1 + deltat)) p1.tableau_point4D in
-    let points1 = List.fold_right List.append points1intermediaire [] in
-    let points2 = p2.tableau_point4D in
+    (*ANCIEN let points1intermediaire = List.map (selectpoint (t1 - deltat) (t1 + deltat)) p1.tableau_point4D in
+    let points1 = List.fold_right List.append points1intermediaire [] in*)
+    let points1 = selectinterval (t1 - deltat) (t1 + deltat) p1.tableau_point4D in
+    let points2 = selectinterval (t1 - deltat) (t1 + deltat) p2.tableau_point4D in
     (*
      on compare un point avec celui le plus proche temporellement de l'autre avion
      on renvoie true en cas de conflit
