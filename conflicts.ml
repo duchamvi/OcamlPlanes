@@ -31,30 +31,33 @@ let assemble = fun known_clusters new_clusters ->
   (** assembles the conclict clusters together A AMELIORER*)
   Array.append known_clusters new_clusters
 
-	       
-let compare_tuple = fun elt tuple ->
-  (** compares the first element of a tuple with elt
-   used by common_beacon *)
-    match tuple with
-      (a,_) -> a = elt
-
-		     
+	       	     
 let common_beacon = fun p1 p2 ->
   (** renvoie une structure contenant les balises communes à deux avions
-   used by two_planes_detection *)
+   used by two_planes_detection A AMELIORER*)
   let balises_communes = [||] in
   let rec cbrec = fun balises1 balises2 communes ->
     match balises1 with
       [] -> communes
-    | (b,t) :: reste ->
-       if List.exists (compare_tuple b) balises2
+    | x::xs ->
+       if List.exists (fun b -> x.nom_balise_avion = b.nom_balise_avion) balises2
        then
-	 cbrec reste balises2 (Array.append communes [|b|])
+	 cbrec xs balises2 (Array.append communes [|x.nom_balise_avion|])
        else
-	 cbrec reste balises2 communes					 
+	 cbrec xs balises2 communes					 
   in
   cbrec p1.liste_balises p2.liste_balises balises_communes
 
+let time_of_beacon = fun beacon_name liste_balises ->
+  let rec tob_rec = fun balises ->
+    match balises with
+      [] -> raise (Failure "Conflicts.time_of_beacon : No beacon of this name was found")
+    | x::xs -> if x.nom_balise_avion = beacon_name
+	       then
+		 x.temps_passage
+	       else
+		 tob_rec xs in
+  tob_rec liste_balises
 	
 let pointproche = fun listpoints t ->
   (** Trouve le point le plus proche du temps t dans la liste
@@ -90,7 +93,8 @@ let selectinterval = fun t1 t2 liste_points ->
 		 interval_rec xs ldestination
   in
   interval_rec liste_points []
-      
+
+	       
 let local_detection = fun env p1 p2 beacon already_found ->
   (** detects if p1 and p2 are in conflict near the beacon.
    used by two_planes_detection *)
@@ -102,12 +106,10 @@ let local_detection = fun env p1 p2 beacon already_found ->
     (* on commence par se limiter a un groupe de points proches de la balise *)
 
     (* on selectionne l'intervalle de temps A COMPLETER : on doit ajouter des choix selon les vitesses traitees Idee : choix transmis dans l'env *)
-    let t1 = List.assoc beacon p1.liste_balises in
+    let t1 = time_of_beacon beacon p1.liste_balises in
     let deltat = int_of_float (env.dseparation /. (vitesse (List.hd p1.tableau_point4D))) in
 
     (* on prend les points dans cet intervalle A COMPLETER : on doit ajouter des choix selon les vitesses traitees *)
-    (*ANCIEN let points1intermediaire = List.map (selectpoint (t1 - deltat) (t1 + deltat)) p1.tableau_point4D in
-    let points1 = List.fold_right List.append points1intermediaire [] in*)
     let points1 = selectinterval (t1 - deltat) (t1 + deltat) p1.tableau_point4D in
     let points2 = selectinterval (t1 - deltat) (t1 + deltat) p2.tableau_point4D in
     (*
