@@ -8,7 +8,7 @@ open Types
 (* Reglages *)
 type parametres = {
   dseparation: float;
-  actions_to_test: conflits
+  actions_to_test: Types.conflit list
 }
 
 		       
@@ -27,11 +27,6 @@ let vitesse = fun a ->
   let vya = float a.vy in
   (vxa**2. +. vya**2.)**0.5
 
-			  
-let assemble = fun known_clusters new_clusters ->
-  (** assembles the conclict clusters together A AMELIORER*)
-  Array.append known_clusters new_clusters
-
 	       	     
 let common_beacon = fun p1 p2 ->
   (** renvoie une structure contenant les balises communes à deux avions
@@ -49,17 +44,7 @@ let common_beacon = fun p1 p2 ->
   in
   cbrec p1.liste_balises p2.liste_balises balises_communes
 
-let time_of_beacon = fun beacon_name liste_balises ->
-  let rec tob_rec = fun balises ->
-    match balises with
-      [] -> raise (Failure "Conflicts.time_of_beacon : No beacon of this name was found")
-    | x::xs -> if x.nom_balise_avion = beacon_name
-	       then
-		 x.temps_passage
-	       else
-		 tob_rec xs in
-  tob_rec liste_balises
-	
+	  
 let pointproche = fun listpoints t ->
   (** Trouve le point le plus proche du temps t dans la liste
    used by local_detection *)
@@ -83,73 +68,56 @@ let selectpoint = fun t1 t2 point ->
   else
     []
 
-	       
-let local_detection = fun env p1 p2 ->
+
+let selecttraj = fun plane action_chosen ->
+  (** returns the chosen trajectory of a plane *)
+  match action_chosen with
+    Acceleration -> plane.trajectoires.acceleree
+  | Ralentissement -> plane.trajectoires.ralentie
+  | Constante -> plane.trajectoires.initiale
+  
+let local_detection = fun separation  p1 p2 action1 action2 ->
   (** detects if p1 and p2 are in conflict near the beacon by comparing all of their 4D points.
    used by two_planes_detection *)
-
-    (* on prend les points à comparer A COMPLETER : on doit ajouter des choix selon les vitesses traitees *)
-    let points1 = p1.trajectoires.initiale in
-    let points2 = p2.trajectoires.initiale in
-    (*
-     on compare un point avec celui le plus proche temporellement de l'autre avion
-     on renvoie true en cas de conflit
-     *)
-    let rec loc_detec_rec = fun listepoints1 ->
-      match listepoints1 with
-	[] -> false
-      | x::xs -> let pointp2 = pointproche points2 x.temps in
-		 (distance x pointp2 < env.dseparation) || loc_detec_rec xs
-    in
-    loc_detec_rec points1
-let local_detection = fun env p1 p2 ->
-  (** detects if p1 and p2 are in conflict near the beacon by comparing all of their 4D points.
-   used by two_planes_detection *)
-
-    (* on prend les points à comparer A COMPLETER : on doit ajouter des choix selon les vitesses traitees *)
-    let points1 = p1.trajectoires.initiale in
-    let points2 = p2.trajectoires.initiale in
-    (*
-     on compare un point avec celui le plus proche temporellement de l'autre avion
-     on renvoie true en cas de conflit
-     *)
-    let rec loc_detec_rec = fun listepoints1 ->
-      match listepoints1 with
-	[] -> false
-      | x::xs -> let pointp2 = pointproche points2 x.temps in
-		 (distance x pointp2 < env.dseparation) || loc_detec_rec xs
-    in
-    loc_detec_rec points1		      
-
-let two_planes_detection = fun env p1 p2 conflict_clusters ->
+    
+  (* on prend les points à comparer A COMPLETER : on doit ajouter des choix selon les vitesses traitees *)
+  let points1 = p1.trajectoires.initiale in
+  let points2 = p2.trajectoires.initiale in
+  (*
+    on compare un point avec celui le plus proche temporellement de l'autre avion
+    on renvoie true en cas de conflit
+   *)
+  let rec loc_detec_rec = fun listepoints1 ->
+    match listepoints1 with
+      [] -> false
+    | x::xs -> let pointp2 = pointproche points2 x.temps in
+	       (distance x pointp2 < separation) || loc_detec_rec xs
+  in
+  loc_detec_rec points1		      
+		
+let two_planes_detection = fun env known_conflicts p1 p2 ->
   (** Detects a conflict between p1 and p2 and adds it to a cluster. 
-   used by added_plane_detection *)
+   used by added _plane_detection *)
   if p1.fl = p2.fl
   then
     let communes = common_beacon p1 p2 in
-    if communes = [||]
+    if not (communes = [||])
     then
-      conflict_clusters
-    else
-      let conflict_was_found = local_detection env p1 p2 in
-      if conflict_was_found
-      then
-	Array.append conflict_clusters [|[| p1; p2|]|]
-      else
-	conflict_clusters
-  else
-    conflict_clusters
+      let select_real_conflicts = fun situation ->
+	match situation with
+	  Conflit (action1, action2) -> local_detection env.dseparation p1 p2 action1 action2 in
+      let liste_conflits = List.filter select_real_conflicts env.actions_to_test in
+      Hashtbl.add known_conflicts (p1.nom,p2.nom) liste_conflits
 
       
 let added_plane_detection = fun p planesinactivity env known_conflicts ->
   (** returns the conflicts clusters with the new plane *)
-  let new_conflicts = Array.fold_right (two_planes_detection env p) planesinactivity [||] in
-  assemble known_conflicts new_conflicts
+  Array.iter (two_planes_detection env known_conflicts p) planesinactivity
 
 	   
 let () =
   (* demo *)
-  let all_possibilities = Conflits [Conflit (Acceleration,Acceleration);
+  let all_possibilities = [Conflit (Acceleration,Acceleration);
 							       Conflit (Acceleration,Ralentissement);
 							       Conflit (Acceleration,Constante);
 							       Conflit (Ralentissement,Acceleration);
@@ -158,7 +126,7 @@ let () =
 							       Conflit (Constante,Acceleration);
 							       Conflit (Constante,Ralentissement);
 							       Conflit (Constante,Constante)]in
-  let conflict_clusters = ref [||] in
+  let table_conflits = Hashtbl.create 1000 in
   let env = {dseparation=5. *. 64.; actions_to_test= all_possibilities} in
   
   (* creation des avions de test*)
@@ -192,10 +160,20 @@ let () =
 	    fl=1} in
 
   (* detection *)
-  let ajout = fun a -> added_plane_detection a !planesinactivity env !conflict_clusters in
+  let ajout = fun a -> added_plane_detection a !planesinactivity env table_conflits in
   
-  conflict_clusters := ajout a2;
+  ajout a2;
   planesinactivity := Array.append !planesinactivity [|a2|];
-  conflict_clusters := ajout a3;
-
-  Array.iter (fun x -> Printf.printf "(%s;%s)\n" x.(0).nom x.(1).nom) !conflict_clusters
+  ajout a3;
+  (* affichage *)
+  let affichage_conf = fun duo_avions liste_conflits ->
+    Printf.printf "%s & %s" (fst duo_avions) (snd duo_avions);
+    let i = ref 0 in
+    List.iter (fun x -> incr i;
+			Printf.printf "\nConflit %d : " !i;
+			match x with
+			  Conflit (action1, action2) -> (afficher_action action1;
+							 afficher_action action2);) liste_conflits;
+    Printf.printf "\n"
+  in
+  Hashtbl.iter affichage_conf table_conflits
