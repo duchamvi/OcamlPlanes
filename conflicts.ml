@@ -8,6 +8,7 @@ open Types
 (* Reglages *)
 type parametres = {
   dseparation: float;
+  actions_to_test: conflits
 }
 
 		       
@@ -82,36 +83,14 @@ let selectpoint = fun t1 t2 point ->
   else
     []
 
-let selectinterval = fun t1 t2 liste_points ->
-  let rec interval_rec = fun lorigine ldestination ->
-    match lorigine with
-      [] -> List.rev ldestination
-    | x::xs -> if (t1 < x.temps) && (x.temps < t2)
-	       then
-		 interval_rec xs (x::ldestination)
-	       else
-		 interval_rec xs ldestination
-  in
-  interval_rec liste_points []
-
 	       
-let local_detection = fun env p1 p2 beacon already_found ->
-  (** detects if p1 and p2 are in conflict near the beacon.
+let local_detection = fun env p1 p2 ->
+  (** detects if p1 and p2 are in conflict near the beacon by comparing all of their 4D points.
    used by two_planes_detection *)
-  if already_found
-  then
-    already_found
-  else
 
-    (* on commence par se limiter a un groupe de points proches de la balise *)
-
-    (* on selectionne l'intervalle de temps A COMPLETER : on doit ajouter des choix selon les vitesses traitees Idee : choix transmis dans l'env *)
-    let t1 = time_of_beacon beacon p1.liste_balises in
-    let deltat = int_of_float (env.dseparation /. (vitesse (List.hd p1.tableau_point4D))) in
-
-    (* on prend les points dans cet intervalle A COMPLETER : on doit ajouter des choix selon les vitesses traitees *)
-    let points1 = selectinterval (t1 - deltat) (t1 + deltat) p1.tableau_point4D in
-    let points2 = selectinterval (t1 - deltat) (t1 + deltat) p2.tableau_point4D in
+    (* on prend les points à comparer A COMPLETER : on doit ajouter des choix selon les vitesses traitees *)
+    let points1 = p1.trajectoires.initiale in
+    let points2 = p2.trajectoires.initiale in
     (*
      on compare un point avec celui le plus proche temporellement de l'autre avion
      on renvoie true en cas de conflit
@@ -123,7 +102,24 @@ let local_detection = fun env p1 p2 beacon already_found ->
 		 (distance x pointp2 < env.dseparation) || loc_detec_rec xs
     in
     loc_detec_rec points1
-		      
+let local_detection = fun env p1 p2 ->
+  (** detects if p1 and p2 are in conflict near the beacon by comparing all of their 4D points.
+   used by two_planes_detection *)
+
+    (* on prend les points à comparer A COMPLETER : on doit ajouter des choix selon les vitesses traitees *)
+    let points1 = p1.trajectoires.initiale in
+    let points2 = p2.trajectoires.initiale in
+    (*
+     on compare un point avec celui le plus proche temporellement de l'autre avion
+     on renvoie true en cas de conflit
+     *)
+    let rec loc_detec_rec = fun listepoints1 ->
+      match listepoints1 with
+	[] -> false
+      | x::xs -> let pointp2 = pointproche points2 x.temps in
+		 (distance x pointp2 < env.dseparation) || loc_detec_rec xs
+    in
+    loc_detec_rec points1		      
 
 let two_planes_detection = fun env p1 p2 conflict_clusters ->
   (** Detects a conflict between p1 and p2 and adds it to a cluster. 
@@ -135,7 +131,8 @@ let two_planes_detection = fun env p1 p2 conflict_clusters ->
     then
       conflict_clusters
     else
-      if  Array.fold_right (local_detection env p1 p2) communes false
+      let conflict_was_found = local_detection env p1 p2 in
+      if conflict_was_found
       then
 	Array.append conflict_clusters [|[| p1; p2|]|]
       else
@@ -152,43 +149,46 @@ let added_plane_detection = fun p planesinactivity env known_conflicts ->
 	   
 let () =
   (* demo *)
+  let all_possibilities = Conflits [Conflit (Acceleration,Acceleration);
+							       Conflit (Acceleration,Ralentissement);
+							       Conflit (Acceleration,Constante);
+							       Conflit (Ralentissement,Acceleration);
+							       Conflit (Ralentissement,Ralentissement);
+							       Conflit (Ralentissement,Constante);
+							       Conflit (Constante,Acceleration);
+							       Conflit (Constante,Ralentissement);
+							       Conflit (Constante,Constante)]in
   let conflict_clusters = ref [||] in
-  let env = {dseparation=5. *. 64.} in
+  let env = {dseparation=5. *. 64.; actions_to_test= all_possibilities} in
   
   (* creation des avions de test*)
-  let traj1 = [{x=50;y=50;z=1;temps=1;vx=1;vy=0};{x=1;y=1;z=1;temps=1;vx=1;vy=0}] in
-  let balises1 = [("b",1)] in
+  let traj1 = [{x=50;y=50;temps=1;vx=1;vy=0};{x=1;y=1;temps=1;vx=1;vy=0}] in
+  let balises1 = [{nom_balise_avion="b"; temps_passage=1}] in
   let a1 = {nom="a1";
 	    liste_balises=balises1;
-	    balisesmoins5=balises1;
-	    balisesplus5=balises1;
-	    tableau_point4D=traj1;
-	    trajmoins5=traj1;
-	    trajplus5=traj1;
+	    trajectoires={acceleree=traj1;
+	    ralentie=traj1;
+	    initiale=traj1};
 	    fl=1} in
   
   let planesinactivity = ref [|a1|] in
 
-  let traj2 = [{x=100;y=100;z=1;temps=1;vx=1;vy=0};{x=1;y=1;z=1;temps=1;vx=1;vy=0}] in
-  let balises2 = [("a",1);("b",1)] in
+  let traj2 = [{x=100;y=100;temps=1;vx=1;vy=0};{x=1;y=1;temps=1;vx=1;vy=0}] in
+  let balises2 = [{nom_balise_avion="a"; temps_passage=1};{nom_balise_avion="b"; temps_passage=1}] in
   let a2 = {nom="a2";
 	    liste_balises=balises2;
-	    balisesmoins5=balises2;
-	    balisesplus5=balises2;
-	    tableau_point4D=traj2;
-	    trajmoins5=traj2;
-	    trajplus5=traj2;
+	    trajectoires={acceleree=traj2;
+	    ralentie=traj2;
+	    initiale=traj2};
 	    fl=1} in
   
-  let traj3 = [{x=100;y=100;z=1;temps=1;vx=1;vy=0};{x=10000;y=10000;z=1;temps=1;vx=1;vy=0}] in
-  let balises3 = [("a",1)] in
+  let traj3 = [{x=100;y=100;temps=1;vx=1;vy=0};{x=10000;y=10000;temps=1;vx=1;vy=0}] in
+  let balises3 = [{nom_balise_avion="a"; temps_passage=1}] in
   let a3 = {nom="a3";
 	    liste_balises=balises3;
-	    balisesmoins5=balises3;
-	    balisesplus5=balises3;
-	    tableau_point4D=traj3;
-	    trajmoins5=traj3;
-	    trajplus5=traj3;
+	    trajectoires={acceleree=traj3;
+	    ralentie=traj3;
+	    initiale=traj3};
 	    fl=1} in
 
   (* detection *)

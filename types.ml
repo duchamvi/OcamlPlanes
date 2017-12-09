@@ -31,8 +31,14 @@ type balise = {
 
 type action =
     Acceleration
-  |Ralentissement;;
+   | Ralentissement
+   | Constante
 
+       
+type conflit =
+    Conflit of action*action
+
+			
 let vitesse = fun point ->
   let vxp = float point.vx in
   let vyp = float point.vy in
@@ -73,7 +79,9 @@ let calcul_trajectoires = fun liste_point ->
                         y = point.y ;
                         temps = int_of_float (3600.*.64.*. (distance point (List.hd liste_point)) /. (diminution_vitesse point)) ;
                         vx = int_of_float (float point.vx*.0.95) ;
-                        vy = int_of_float (float point.vy*.0.95) }(*MODIFIER LE POINT DE DEPART DE LA MODIFICATION DE VITESSE *) in
+                        vy = int_of_float (float point.vy*.0.95) }(*MODIFIER LE POINT DE DEPART DE LA MODIFICATION DE VITESSE *)
+    |Constante -> point
+  in
   let rec mp_rec = fun lnormale lmodif action  ->
     match lnormale with
       [] -> List.rev lmodif
@@ -126,8 +134,11 @@ let afficher_balise = fun balise ->
   Printf.printf "(%d,%d)\n" balise.bx balise.by;;
 
 
-
-
+let afficher_action = fun action ->
+  match action with
+    Acceleration -> Printf.printf "acceleration "
+  | Ralentissement -> Printf.printf "ralentissement "
+  |Constante -> Printf.printf "constante "
 
 
     
