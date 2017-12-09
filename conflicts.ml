@@ -80,9 +80,9 @@ let local_detection = fun separation  p1 p2 action1 action2 ->
   (** detects if p1 and p2 are in conflict near the beacon by comparing all of their 4D points.
    used by two_planes_detection *)
     
-  (* on prend les points à comparer A COMPLETER : on doit ajouter des choix selon les vitesses traitees *)
-  let points1 = p1.trajectoires.initiale in
-  let points2 = p2.trajectoires.initiale in
+  (* on prend les points à comparer selon les vitesses traitees *)
+  let points1 = selecttraj p1 action1 in
+  let points2 = selecttraj p2 action2 in
   (*
     on compare un point avec celui le plus proche temporellement de l'autre avion
     on renvoie true en cas de conflit
