@@ -1,9 +1,9 @@
 (** Conflict detection module *)
 
 
-(*module Data = Types*)
+(*module Data = Lecture*)
+open Lecture
 open Types
-
        
 (* Reglages *)
 type parametres = {
@@ -107,64 +107,43 @@ let two_planes_detection = fun env known_conflicts p1 p2 ->
 	match situation with
 	  Conflit (action1, action2) -> local_detection env.dseparation p1 p2 action1 action2 in
       let liste_conflits = List.filter select_real_conflicts env.actions_to_test in
-      Hashtbl.add known_conflicts (p1.nom,p2.nom) liste_conflits
+      if liste_conflits !=[] then
+	Hashtbl.add known_conflicts (p1.nom,p2.nom) liste_conflits
 
       
 let added_plane_detection = fun p planesinactivity env known_conflicts ->
   (** returns the conflicts clusters with the new plane *)
-  Array.iter (two_planes_detection env known_conflicts p) planesinactivity
+  List.iter (two_planes_detection env known_conflicts p) planesinactivity
 
 	   
 let () =
   (* demo *)
   let all_possibilities = [Conflit (Acceleration,Acceleration);
-							       Conflit (Acceleration,Ralentissement);
-							       Conflit (Acceleration,Constante);
-							       Conflit (Ralentissement,Acceleration);
-							       Conflit (Ralentissement,Ralentissement);
-							       Conflit (Ralentissement,Constante);
-							       Conflit (Constante,Acceleration);
-							       Conflit (Constante,Ralentissement);
-							       Conflit (Constante,Constante)]in
+			   Conflit (Acceleration,Ralentissement);
+			   Conflit (Acceleration,Constante);
+			   Conflit (Ralentissement,Acceleration);
+			   Conflit (Ralentissement,Ralentissement);
+			   Conflit (Ralentissement,Constante);
+			   Conflit (Constante,Acceleration);
+			   Conflit (Constante,Ralentissement);
+			   Conflit (Constante,Constante)]in
   let table_conflits = Hashtbl.create 1000 in
-  let env = {dseparation=5. *. 64.; actions_to_test= all_possibilities} in
+  let env = {dseparation=(8. *. 64.); actions_to_test= all_possibilities} in
   
-  (* creation des avions de test*)
-  let traj1 = [{x=50;y=50;temps=1;vx=1;vy=0};{x=1;y=1;temps=1;vx=1;vy=0}] in
-  let balises1 = [{nom_balise_avion="b"; temps_passage=1}] in
-  let a1 = {nom="a1";
-	    liste_balises=balises1;
-	    trajectoires={acceleree=traj1;
-	    ralentie=traj1;
-	    initiale=traj1};
-	    fl=1} in
-  
-  let planesinactivity = ref [|a1|] in
-
-  let traj2 = [{x=100;y=100;temps=1;vx=1;vy=0};{x=1;y=1;temps=1;vx=1;vy=0}] in
-  let balises2 = [{nom_balise_avion="a"; temps_passage=1};{nom_balise_avion="b"; temps_passage=1}] in
-  let a2 = {nom="a2";
-	    liste_balises=balises2;
-	    trajectoires={acceleree=traj2;
-	    ralentie=traj2;
-	    initiale=traj2};
-	    fl=1} in
-  
-  let traj3 = [{x=100;y=100;temps=1;vx=1;vy=0};{x=10000;y=10000;temps=1;vx=1;vy=0}] in
-  let balises3 = [{nom_balise_avion="a"; temps_passage=1}] in
-  let a3 = {nom="a3";
-	    liste_balises=balises3;
-	    trajectoires={acceleree=traj3;
-	    ralentie=traj3;
-	    initiale=traj3};
-	    fl=1} in
-
+  let filename = "exo2.txt" in
+  let num_airplane = 20 in
+  let liste_avions = read_file filename num_airplane in
+  afficher_avion (List.hd liste_avions);
   (* detection *)
-  let ajout = fun a -> added_plane_detection a !planesinactivity env table_conflits in
+  let rec parcours_avions = fun liste_prevus liste_connus ->
+    let ajout = fun a -> added_plane_detection a liste_connus env table_conflits in
+    match liste_prevus with
+      [] -> liste_connus
+    | x::xs -> (ajout x;
+                parcours_avions xs (x::liste_connus)) in
+
+  let avions_ajoutes = parcours_avions liste_avions [] in
   
-  ajout a2;
-  planesinactivity := Array.append !planesinactivity [|a2|];
-  ajout a3;
   (* affichage *)
   let affichage_conf = fun duo_avions liste_conflits ->
     Printf.printf "%s & %s" (fst duo_avions) (snd duo_avions);
@@ -172,8 +151,8 @@ let () =
     List.iter (fun x -> incr i;
 			Printf.printf "\nConflit %d : " !i;
 			match x with
-			  Conflit (action1, action2) -> (afficher_action action1;
-							 afficher_action action2);) liste_conflits;
+			  Conflit (action1, action2) -> (print_action action1;
+							 print_action action2);) liste_conflits;
     Printf.printf "\n"
   in
   Hashtbl.iter affichage_conf table_conflits

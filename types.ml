@@ -22,6 +22,8 @@ type avion = {
     fl : int;
   };;
 
+
+
 type balise = {
     nom_balise : string;
     bx : int;
@@ -31,14 +33,19 @@ type balise = {
 
 type action =
     Acceleration
-   | Ralentissement
-   | Constante
+  |Ralentissement
+  |Constante;;
 
-       
+
 type conflit =
-    Conflit of action*action
+    Conflit of action*action;;
 
-			
+
+type conflits =
+    Conflits of conflit list;;
+
+    
+
 let vitesse = fun point ->
   let vxp = float point.vx in
   let vyp = float point.vy in
@@ -67,7 +74,7 @@ let diminution_vitesse = fun point ->
 let augmentation_vitesse = fun point ->
    (vitesse point)*.1.05;; 
 
-let calcul_trajectoires = fun liste_point ->       
+let calcul_trajectoires = fun liste_point ->
   let modif_point = fun point action ->
     match action with
       Acceleration -> {x = point.x ;
@@ -80,8 +87,7 @@ let calcul_trajectoires = fun liste_point ->
                         temps = int_of_float (3600.*.64.*. (distance point (List.hd liste_point)) /. (diminution_vitesse point)) ;
                         vx = int_of_float (float point.vx*.0.95) ;
                         vy = int_of_float (float point.vy*.0.95) }(*MODIFIER LE POINT DE DEPART DE LA MODIFICATION DE VITESSE *)
-    |Constante -> point
-  in
+    |Constante -> point in
   let rec mp_rec = fun lnormale lmodif action  ->
     match lnormale with
       [] -> List.rev lmodif
@@ -98,11 +104,19 @@ let calcul_trajectoires = fun liste_point ->
 
 
 let creer_avion = fun name liste_balise tableau_point ->
+  Printf.printf "Nom avion : %s \n" name;
   let list_pt4D = ref [] in
-  for i=0 to Array.length tableau_point - 1 do
-    list_pt4D := List.append !list_pt4D [{x = int_of_string tableau_point.(i).(1) ; y = int_of_string tableau_point.(i).(2)  ; temps = convert_time tableau_point.(i).(0) ; vx =int_of_string tableau_point.(i).(3) ; vy = int_of_string tableau_point.(i).(4) }]
+  for i=1 to Array.length tableau_point - 1 do
+    list_pt4D := List.append !list_pt4D [{x = int_of_string tableau_point.(i).(1) ;
+                                          y = int_of_string tableau_point.(i).(2) ;
+                                          temps = convert_time tableau_point.(i).(0) ;
+                                          vx =int_of_string tableau_point.(i).(3) ;
+                                          vy = int_of_string tableau_point.(i).(4) }]
   done;
-  {nom = name ; liste_balises = liste_balise ; trajectoires = calcul_trajectoires (!list_pt4D)  ; fl = int_of_string tableau_point.(0).(5) };;
+  {nom = name ;
+   liste_balises = liste_balise ;
+   trajectoires = calcul_trajectoires (!list_pt4D) ;
+   fl = int_of_string tableau_point.(1).(5)};;
 
 
 let creer_balise_avion = fun liste_balise ->
@@ -124,8 +138,8 @@ let creer_balises = fun liste_balise ->
 
 
 let afficher_avion = fun avion ->
-  Printf.printf "%s\n" avion.nom;
-  List.iter (fun balise -> Printf.printf "%s %d\n" balise.nom_balise_avion balise.temps_passage) avion.liste_balises;
+  Printf.printf "Nom : %s\n" avion.nom;
+  List.iter (fun balise -> Printf.printf "Balise : %s %d\n" balise.nom_balise_avion balise.temps_passage) avion.liste_balises;
   List.iter (fun point4d-> Printf.printf "x = %d, y = %d , temps = %d , vx = %d, vy = %d \n " point4d.x point4d.y point4d.temps point4d.vx point4d.vy ) avion.trajectoires.initiale;;
 
 
@@ -133,15 +147,20 @@ let afficher_balise = fun balise ->
   Printf.printf "%s\n" balise.nom_balise;
   Printf.printf "(%d,%d)\n" balise.bx balise.by;;
 
-
-let afficher_action = fun action ->
+let print_action = fun action ->
   match action with
-    Acceleration -> Printf.printf "acceleration "
-  | Ralentissement -> Printf.printf "ralentissement "
-  |Constante -> Printf.printf "constante "
+    Acceleration -> Printf.printf " Acceleration "
+  |Ralentissement -> Printf.printf " Ralentissement "
+  |Constante -> Printf.printf " Constante ";;
 
 
-    
+let afficher_conflit = fun liste_conflit ->
+  List.iter (fun conflit -> Printf.printf "Action avion1 : "; print_action (fst conflit);
+    Printf.printf "Action avion2 : " ; print_action(snd conflit);)
+    liste_conflit;;
+
+
+
 
 
   
