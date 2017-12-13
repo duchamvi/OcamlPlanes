@@ -20,6 +20,7 @@ type avion = {
     liste_balises : balises_avion list;
     trajectoires : trajectoire;
     fl : int;
+    tp_secteur : int
   };;
 
 
@@ -74,19 +75,25 @@ let diminution_vitesse = fun point ->
 let augmentation_vitesse = fun point ->
    (vitesse point)*.1.05;; 
 
-let calcul_trajectoires = fun liste_point ->
+let calcul_trajectoires = fun liste_point temps_arrivee ->
   let modif_point = fun point action ->
     match action with
-      Acceleration -> {x = point.x ;
+      Acceleration -> if point.temps > temps_arrivee - 600 then {x = point.x ;
                        y = point.y ;
-                       temps = int_of_float (3600.*.64.*. (distance point (List.hd liste_point)) /. (augmentation_vitesse point)) ;
+                       (* temps = int_of_float (3600.*.64.*. (distance point (List.hd liste_point)) /. (augmentation_vitesse point))*)
+                       temps = int_of_float (float (temps_arrivee - 600) +. (float (point.temps - (temps_arrivee - 600))) /. 1.05);(*à modifier*)
                        vx =int_of_float (float point.vx*.1.05) ;
-                       vy = int_of_float (float point.vy*.1.05) }
-    |Ralentissement -> {x = point.x ;
+                                                                 vy = int_of_float (float point.vy*.1.05) }
+      else
+        point
+    |Ralentissement -> if point.temps > temps_arrivee -600 then {x = point.x ;
                         y = point.y ;
-                        temps = int_of_float (3600.*.64.*. (distance point (List.hd liste_point)) /. (diminution_vitesse point)) ;
+                        (*temps = int_of_float (3600.*.64.*. (distance point (List.hd liste_point)) /. (diminution_vitesse point))*)
+                        temps = int_of_float (float (temps_arrivee - 600) +. (float (point.temps - (temps_arrivee - 600))) /. 0.95) ;
                         vx = int_of_float (float point.vx*.0.95) ;
-                        vy = int_of_float (float point.vy*.0.95) }(*MODIFIER LE POINT DE DEPART DE LA MODIFICATION DE VITESSE *)
+                                                                 vy = int_of_float (float point.vy*.0.95) }(*MODIFIER LE POINT DE DEPART DE LA MODIFICATION DE VITESSE *)
+    else
+        point
     |Constante -> point in
   let rec mp_rec = fun lnormale lmodif action  ->
     match lnormale with
@@ -103,7 +110,7 @@ let calcul_trajectoires = fun liste_point ->
   
 
 
-let creer_avion = fun name liste_balise tableau_point ->
+let creer_avion = fun name liste_balise tableau_point temps_arrivee->
   Printf.printf "Nom avion : %s \n" name;
   let list_pt4D = ref [] in
   for i=1 to Array.length tableau_point - 1 do
@@ -115,8 +122,9 @@ let creer_avion = fun name liste_balise tableau_point ->
   done;
   {nom = name ;
    liste_balises = liste_balise ;
-   trajectoires = calcul_trajectoires (!list_pt4D) ;
-   fl = int_of_string tableau_point.(1).(5)};;
+   trajectoires = calcul_trajectoires !list_pt4D temps_arrivee ;
+   fl = int_of_string tableau_point.(1).(5);
+ tp_secteur= temps_arrivee};;
 
 
 let creer_balise_avion = fun liste_balise ->

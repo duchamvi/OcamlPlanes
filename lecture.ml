@@ -58,7 +58,7 @@ let read_file = fun filename num_airplane ->
 	done;
 	if !nb_plane >= num_airplane then
 	  end_plane := false;      
-	airplanes := List.append !airplanes [creer_avion !name !airplane_beacons !airplane_plots];
+	airplanes := List.append !airplanes [creer_avion !name !airplane_beacons !airplane_plots 100];
 
       );
     done;
@@ -69,13 +69,3 @@ let read_file = fun filename num_airplane ->
     close_in chan;
     !airplanes;;
 
-
-
-
-(*let ()=
-  let filename = "exo2.txt" in
-  let num_airplane = 3 in
-  let a = read_file filename num_airplane in
-  Printf.printf "****** Fini ******\n";
-;;
-*)
