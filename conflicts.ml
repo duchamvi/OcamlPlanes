@@ -21,31 +21,7 @@ let common_beacon = fun p1 p2 ->
 	 cbrec xs balises2 communes					 
   in
   cbrec p1.Types.liste_balises p2.Types.liste_balises balises_communes
-
-	  
-let pointproche = fun listpoints t ->
-  (** Trouve le point le plus proche du temps t dans la liste
-   used by local_detection *)
-  let rec pprec = fun pt lpoints ->
-    match lpoints with
-      [] -> pt
-    | x::xs -> if abs (t - x.Types.temps) < abs (t - pt.Types.temps)
-	       then
-		 pprec x xs
-	       else
-		 pprec pt xs in
-  pprec (List.hd listpoints) listpoints
-
-	
-let selectpoint = fun t1 t2 point ->
-  (** renvoie le point dans une liste s'il est entre t1 et t2
-   used by local_detection *)
-  if (t1 < point.Types.temps) && (point.Types.temps < t2)
-  then
-    [ point ]
-  else
-    []
-
+     
 
 let selecttraj = fun plane action_chosen ->
   (** returns the chosen trajectory of a plane *)
@@ -68,7 +44,7 @@ let local_detection = fun separation  p1 p2 action1 action2 ->
   let rec loc_detec_rec = fun listepoints1 ->
     match listepoints1 with
       [] -> false
-    | x::xs -> let pointp2 = pointproche points2 x.Types.temps in
+    | x::xs -> let pointp2 = Types.point_interpole points2 x.Types.temps in
 	       (Types.distance x pointp2 < separation) || loc_detec_rec xs
   in
   loc_detec_rec points1		      

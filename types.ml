@@ -4,16 +4,16 @@ type point = {
     temps : int;
     vx : int;
     vy : int;
-  };;
+  }
 
 type trajectoire = {
     acceleree : point list;
     ralentie : point list;
-    initiale : point list};;
+    initiale : point list}
 
 type balises_avion = {
     nom_balise_avion : string;
-    temps_passage : int};;
+    temps_passage : int}
 
 type avion = {
     nom : string ;
@@ -21,61 +21,101 @@ type avion = {
     trajectoires : trajectoire;
     fl : int;
     tp_secteur : int
-  };;
-
-
+  }
 
 type balise = {
     nom_balise : string;
     bx : int;
     by : int;
-  };;
-
+  }
 
 type action =
     Acceleration
   |Ralentissement
   |Constante;;
 
-
 type conflit =
     Conflit of action*action;;
 
-
-type conflits =
-    Conflits of conflit list;;
-
-    
-
+  
 let vitesse = fun point ->
+  (** Renvoie la vitesse d'un point *)
   let vxp = float point.vx in
   let vyp = float point.vy in
-  (vxp**2. +. vyp**2.)**0.5;;
+  (vxp**2. +. vyp**2.)**0.5
 
 let norme  = fun point ->
   let xp = float point.x in
   let yp = float point.y in
-  (xp**2. +. yp**2.)**0.5;;
+  (xp**2. +. yp**2.)**0.5
 
 let distance = fun point1 point2 ->
+  (** renvoie la distance entre deux points *)
   let xp1 = float point1.x in
   let xp2 = float point2.x in
   let yp1 = float point1.y in
   let yp2 = float point2.y in
-  ((xp1-.xp2)**2. +. (yp1 -. yp2)**2.)**0.5;;
+  ((xp1-.xp2)**2. +. (yp1 -. yp2)**2.)**0.5
+				      
 
+let point_interpole = fun lp t ->
+    (** Trouve le point de temps t dans la liste en interpolant les deux plus proches
+   used by local_detection *)
+  (* si le temps est avant le premier point de la liste, prendre le premier point et estimer sa position a t *)
+  let depart = List.hd lp in
+  if depart.temps > t then
+    {
+      x = depart.x - depart.vx*(depart.temps-t);
+      y = depart.y - depart.vy*(depart.temps-t);
+      temps = t;
+      vx = depart.vx;
+      vy = depart.vy;
+    }
+  else
+    (* Trouver le point de temps juste inferieur et le suivant *)
+    let rec pi_rec = fun liste lastpoint->
+      match liste with
+	[] -> let fin = lastpoint in (* le dernier point est avant le temps t *)
+	      {
+		x = fin.x + fin.vx*(t-fin.temps);
+		y = fin.y + fin.vy*(t-fin.temps);
+		temps = t;
+		vx = fin.vx;
+		vy = fin.vy;
+	      }
+      | p::ps -> let dt2 = p.temps - t in
+		 if dt2 > 0 then
+		   let dt1 = t - lastpoint.temps in
+		   let interpole_param = fun u v ->
+		     int_of_float ((float (u*dt2 + v*dt1)) /. (float (dt1+dt2))) in
+		   {		       
+		     x = interpole_param lastpoint.x p.x; 
+		     y = interpole_param lastpoint.y p.y;
+		       temps = t;
+		       vx = interpole_param lastpoint.vx p.vx;
+		       vy =  interpole_param lastpoint.vy p.vy;
+		   }
+		 else
+		   pi_rec ps p in
+    pi_rec lp depart
+		     
+  
 let convert_time = fun time ->
+  (** convertit le temps en secondes *)
   let list_time = Str.split (Str.regexp ":") time in
-  3600 * int_of_string (List.nth list_time 0) + 60 * int_of_string (List.nth list_time 1) + int_of_string (List.nth list_time 2);;
+  3600 * int_of_string (List.nth list_time 0) + 60 * int_of_string (List.nth list_time 1) + int_of_string (List.nth list_time 2)
 
 
 let diminution_vitesse = fun point ->
-  (vitesse point)*.0.95;;
+  (** calcule la vitesse reduite *)
+  (vitesse point)*.0.95
 
 let augmentation_vitesse = fun point ->
-   (vitesse point)*.1.05;; 
+  (** calcule la vitesse augmentee *)
+  (vitesse point)*.1.05
 
 let calcul_trajectoires = fun liste_point temps_arrivee ->
+  (** Renvoie l'objet trajectoires pour la creation de l'avion *)
   let modif_point = fun point action ->
     match action with
       Acceleration -> if point.temps > temps_arrivee - 600 then {x = point.x ;
@@ -111,6 +151,7 @@ let calcul_trajectoires = fun liste_point temps_arrivee ->
 
 
 let creer_avion = fun name liste_balise tableau_point temps_arrivee->
+  (** cree un objet avion à partir des donnees d'entree *)
   Printf.printf "Nom avion : %s \n" name;
   let list_pt4D = ref [] in
   for i=1 to Array.length tableau_point - 1 do
@@ -128,6 +169,7 @@ let creer_avion = fun name liste_balise tableau_point temps_arrivee->
 
 
 let creer_balise_avion = fun liste_balise ->
+  (** cree un objet balise_avion a partir des donnees *)
   let rec balise_rec = fun lbal liste_balise_avion ->
     match lbal with
       [] -> List.rev liste_balise_avion

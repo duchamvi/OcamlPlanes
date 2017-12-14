@@ -12,10 +12,10 @@ let () =
 			   Types.Conflit (Types.Constante,Types.Ralentissement);
 			   Types.Conflit (Types.Constante,Types.Constante)]in
   let table_conflits = Hashtbl.create 1000 in
-  let env = {Conflicts.dseparation=(8. *. 64.); Conflicts.actions_to_test= all_possibilities} in
+  let env = {Conflicts.dseparation=(6. *. 64.); Conflicts.actions_to_test= all_possibilities} in
   
   let filename = "exo2.txt" in
-  let num_airplane = 20 in
+  let num_airplane = 164 in
   (* creation des objets avions *)
   let liste_avions = Lecture.read_file filename num_airplane in
 
