@@ -52,7 +52,7 @@ let local_detection = fun separation  p1 p2 action1 action2 ->
 let two_planes_detection = fun env known_conflicts p1 p2 ->
   (** Detects a conflict between p1 and p2 and adds it to a cluster. 
    used by added _plane_detection *)
-  if p1.Types.fl = p2.Types.fl
+  if (p1.Types.fl = p2.Types.fl) && (p2.Types.tp_secteur != -1)
   then
     let communes = common_beacon p1 p2 in
     if not (communes = [||])
@@ -67,5 +67,6 @@ let two_planes_detection = fun env known_conflicts p1 p2 ->
       
 let added_plane_detection = fun p planesinactivity env known_conflicts ->
   (** returns the conflicts clusters with the new plane *)
-  List.iter (two_planes_detection env known_conflicts p) planesinactivity
+  if p.Types.tp_secteur != -1 then
+    List.iter (two_planes_detection env known_conflicts p) planesinactivity
 

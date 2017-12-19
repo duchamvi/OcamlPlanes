@@ -201,16 +201,31 @@ let print_action = fun action ->
   match action with
     Acceleration -> Printf.printf " Acceleration "
   |Ralentissement -> Printf.printf " Ralentissement "
-  |Constante -> Printf.printf " Constante ";;
+  |Constante -> Printf.printf " Constante "
 
+let cout_action = fun action ->
+  match action with
+    Acceleration -> 2
+  |Ralentissement -> 1
+  |Constante -> 0
+			      
+let affichage_conf = fun duo_avions liste_conflits ->
+  Printf.printf "%s & %s" (fst duo_avions) (snd duo_avions);
+  let i = ref 0 in
+  List.iter (fun x -> incr i;
+		      Printf.printf "\nConflit %d : " !i;
+		      match x with
+			Conflit (action1, action2) -> (print_action action1;
+							     print_action action2);) liste_conflits;
+  Printf.printf "\n"
 
-let afficher_conflit = fun liste_conflit ->
-  List.iter (fun conflit -> Printf.printf "Action avion1 : "; print_action (fst conflit);
-    Printf.printf "Action avion2 : " ; print_action(snd conflit);)
-    liste_conflit;;
-
-
-
-
+let compare_conflits = fun liste_conflits action1 action2 ->
+  let rec ccrec = fun liste ->
+    match liste with
+      [] -> false
+    | (Conflit (a1,a2))::xs ->
+        ((a1=action1) && (a2=action2)) || ccrec xs
+  in
+  ccrec liste_conflits
 
   

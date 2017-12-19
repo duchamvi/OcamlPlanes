@@ -1,6 +1,8 @@
 (** Main module *)
 
 let () =
+  let distance_sep = float_of_string Sys.argv.(1) in
+  let num_airplane = int_of_string Sys.argv.(2) in  
   (* demo *)
   let all_possibilities = [Types.Conflit (Types.Acceleration,Types.Acceleration);
 			   Types.Conflit (Types.Acceleration,Types.Ralentissement);
@@ -12,10 +14,9 @@ let () =
 			   Types.Conflit (Types.Constante,Types.Ralentissement);
 			   Types.Conflit (Types.Constante,Types.Constante)]in
   let table_conflits = Hashtbl.create 1000 in
-  let env = {Conflicts.dseparation=(6. *. 64.); Conflicts.actions_to_test= all_possibilities} in
+  let env = {Conflicts.dseparation=(distance_sep *. 64.); Conflicts.actions_to_test= all_possibilities} in
   
   let filename = "exo2.txt" in
-  let num_airplane = 164 in
   (* creation des objets avions *)
   let liste_avions = Lecture.read_file filename num_airplane in
 
@@ -30,14 +31,17 @@ let () =
   let avions_ajoutes = parcours_avions liste_avions [] in
   
   (* affichage *)
-  let affichage_conf = fun duo_avions liste_conflits ->
-    Printf.printf "%s & %s" (fst duo_avions) (snd duo_avions);
-    let i = ref 0 in
-    List.iter (fun x -> incr i;
-			Printf.printf "\nConflit %d : " !i;
-			match x with
-			  Types.Conflit (action1, action2) -> (Types.print_action action1;
-							       Types.print_action action2);) liste_conflits;
-    Printf.printf "\n"
-  in
-  Hashtbl.iter affichage_conf table_conflits
+  Hashtbl.iter Types.affichage_conf table_conflits;
+  Printf.printf "\n";
+  flush stdout;
+
+  (* calcul de la solution *)
+  let solution = Backtrack.backtrack
+      avions_ajoutes
+      Backtrack.choose4
+      [|Types.Constante; Types.Ralentissement; Types.Acceleration|]
+      Backtrack.conflit
+      table_conflits
+      Backtrack.choix in
+
+  Backtrack.affichage_branche solution
