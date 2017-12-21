@@ -123,9 +123,33 @@ let conflit = fun avion action a hashconflits ->
         else
           conflit_rec xs
   in
-  conflit_rec a;;
+  conflit_rec a
 
 
+let conflitdufutur = fun avion action v hashconflits ->
+  let liste_avions = filtrage v avion in
+  let rec conflit_rec = fun list ->
+    match list with
+      [] -> false
+    | x::xs ->
+       let nom_avion = x.Types.nom in
+       if Hashtbl.mem hashconflits (nom_avion , avion.Types.nom)
+       then
+         let list_conflit = Hashtbl.find hashconflits (nom_avion , avion.Types.nom ) in
+         ((Types.compare_conflits list_conflit Types.Constante action) &&
+	    (Types.compare_conflits list_conflit Types.Acceleration action) &&
+	      (Types.compare_conflits list_conflit Types.Ralentissement action)) || (conflit_rec xs)
+       else if Hashtbl.mem hashconflits (avion.Types.nom , nom_avion)
+       then
+         let list_conflit = Hashtbl.find hashconflits (avion.Types.nom , nom_avion) in
+         ((Types.compare_conflits list_conflit action Types.Constante) &&
+	    (Types.compare_conflits list_conflit action Types.Acceleration) &&
+	      (Types.compare_conflits list_conflit action Types.Ralentissement)) || (conflit_rec xs)
+       else
+         conflit_rec xs
+  in
+  conflit_rec liste_avions
+	      
 let choix = fun sol ->
   let rec chrec = fun liste soltemp ->
     match liste with
@@ -154,14 +178,16 @@ let rec backtrack = fun liste_avions choose d conflit hashtbl_conflit choix ->
       (* test des nouvelles possibilites *)
       for i = 0 to Array.length d - 1 do
 	let actioni = d.(i) in
-	let couti = Types.cout_action actioni in
-        if not (conflit avion actioni a hashtbl_conflit)
-        then
-          (* enregistrer cette possibilite *)
-          if (c+couti) < !coutmin
-	  then
-            let possibilite = btrec (filtrage v avion) ((avion.Types.nom,d.(i))::a) (c+couti) r in
-            solutions:= List.append !solutions [possibilite];
+	if (avion.Types.tp_secteur != -1) || actioni = Types.Constante then (* empeche d'attribuer une action autre que constante a un avion hors du secteur *)
+	  let couti = Types.cout_action actioni in
+          if (not (conflit avion actioni a hashtbl_conflit)) &&
+	       (not (conflitdufutur avion actioni v hashtbl_conflit))
+          then
+            (* enregistrer cette possibilite *)
+            if (c+couti) < !coutmin
+	    then
+              let possibilite = btrec (filtrage v avion) ((avion.Types.nom,d.(i))::a) (c+couti) r in
+              solutions:= List.append !solutions [possibilite];
       done;
       
       (* choisir la possibilite qu'on renvoie et traiter le cas ou aucune solution n'existe *)
@@ -180,92 +206,7 @@ let rec backtrack = fun liste_avions choose d conflit hashtbl_conflit choix ->
   btrec (pre_tri liste_avions hashtbl_conflit) [] 0 []
 
 
-let rec semiglouton = fun liste_avions choose d conflit hashtbl_conflit choix ->
-  
-  let coutmin = ref max_int in
-  
-  let rec btrec = fun v a c r ->
-    (* cas ou l'on arrive au bout de l'arbre de possibilites *)
-    if v = []  then (coutmin := c ; {manoeuvres = a; cout = c; retraits = r})
-		      
-    else
-      (* avancement dans l'arbre *)
-      let avion = choose v hashtbl_conflit in
-      let solutions = ref [] in
 
-      (* test des nouvelles possibilites *)
-      let i = ref 0 in
-      while (!i < (Array.length d - 1)) && (List.length !solutions < 2) do
-	let actioni = d.(!i) in
-	i:= !i +1;
-	let couti = Types.cout_action actioni in
-        if not (conflit avion actioni a hashtbl_conflit)
-        then
-          (* enregistrer cette possibilite *)
-          if (c+couti) < !coutmin
-	  then
-            let possibilite = btrec (filtrage v avion) ((avion.Types.nom,d.(!i))::a) (c+couti) r in
-            solutions:= List.append !solutions [possibilite];
-      done;
-      
-      (* choisir la possibilite qu'on renvoie et traiter le cas ou aucune solution n'existe *)
-      if !solutions = []
-      then
-        if (c+1000) < !coutmin
-        then
-          btrec (filtrage v avion) a (c+1000) ((avion.Types.nom)::r)
-        else
-          {manoeuvres =[] ; cout = (c+1000) ; retraits =[]}
-      else
-        choix !solutions
-          
-  in
-
-  btrec liste_avions [] 0 []
-
-	
-let rec glouton = fun liste_avions choose d conflit hashtbl_conflit choix ->
-  (** resout avec un algorithme glouton *)
-  let coutmin = ref max_int in
-  
-  let rec btrec = fun v a c r ->
-    (* cas ou l'on arrive au bout de l'arbre de possibilites *)
-    if v = []  then (coutmin := c ; {manoeuvres = a; cout = c; retraits = r})
-		      
-    else
-      (* avancement dans l'arbre *)
-      let avion = choose v hashtbl_conflit in
-      let solutions = ref [] in
-
-      (* test des nouvelles possibilites *)
-      let i = ref 0 in
-      while (!i < (Array.length d - 1)) && (List.length !solutions < 1) do
-	let actioni = d.(!i) in
-	i:= !i +1;
-	let couti = Types.cout_action actioni in
-        if not (conflit avion actioni a hashtbl_conflit)
-        then
-          (* enregistrer cette possibilite *)
-          if (c+couti) < !coutmin
-	  then
-            let possibilite = btrec (filtrage v avion) ((avion.Types.nom,d.(!i))::a) (c+couti) r in
-            solutions:= List.append !solutions [possibilite];
-      done;
-      
-      (* choisir la possibilite qu'on renvoie et traiter le cas ou aucune solution n'existe *)
-      if !solutions = []
-      then
-        if (c+1000) < !coutmin
-        then
-          btrec (filtrage v avion) a (c+1000) ((avion.Types.nom)::r)
-        else
-          {manoeuvres =[] ; cout = (c+1000) ; retraits =[]}
-      else
-        choix !solutions
-          
-  in
-  (*let liste_avions =(pre_tri liste_avions hashtbl_conflit) in*)
-  btrec liste_avions [] 0 []
 
 	
 let affichage_manoeuvres = fun manoeuvre ->

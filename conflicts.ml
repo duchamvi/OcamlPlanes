@@ -3,7 +3,9 @@
 (* Reglages *)
 type parametres = {
   dseparation: float;
-  actions_to_test: Types.conflit list
+  all_actions: Types.conflit list;
+  actions_1_out: Types.conflit list;
+  actions_2_out: Types.conflit list
 }
 	       	     
 let common_beacon = fun p1 p2 ->
@@ -52,7 +54,7 @@ let local_detection = fun separation  p1 p2 action1 action2 ->
 let two_planes_detection = fun env known_conflicts p1 p2 ->
   (** Detects a conflict between p1 and p2 and adds it to a cluster. 
    used by added _plane_detection *)
-  if (p1.Types.fl = p2.Types.fl) && (p2.Types.tp_secteur != -1)
+  if (p1.Types.fl = p2.Types.fl)
   then
     let communes = common_beacon p1 p2 in
     if not (communes = [||])
@@ -60,7 +62,12 @@ let two_planes_detection = fun env known_conflicts p1 p2 ->
       let select_real_conflicts = fun situation ->
 	match situation with
 	  Types.Conflit (action1, action2) -> local_detection env.dseparation p1 p2 action1 action2 in
-      let liste_conflits = List.filter select_real_conflicts env.actions_to_test in
+      let actions_to_test = ref env.all_actions in
+      if p1.Types.tp_secteur = -1 then
+	actions_to_test := env.actions_1_out
+      else if p2.Types.tp_secteur = -1 then
+	actions_to_test := env.actions_2_out;     
+      let liste_conflits = List.filter select_real_conflicts !actions_to_test in
       if liste_conflits !=[] then
 	Hashtbl.add known_conflicts (p1.Types.nom,p2.Types.nom) liste_conflits
 

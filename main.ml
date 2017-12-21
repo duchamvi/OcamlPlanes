@@ -12,9 +12,18 @@ let () =
 			   Types.Conflit (Types.Ralentissement,Types.Constante);
 			   Types.Conflit (Types.Constante,Types.Acceleration);
 			   Types.Conflit (Types.Constante,Types.Ralentissement);
-			   Types.Conflit (Types.Constante,Types.Constante)]in
+			   Types.Conflit (Types.Constante,Types.Constante)] in
+  let one_out = [Types.Conflit (Types.Constante,Types.Acceleration);
+	       Types.Conflit (Types.Constante,Types.Ralentissement);
+	       Types.Conflit (Types.Constante,Types.Constante)] in
+  let two_out = [Types.Conflit (Types.Acceleration,Types.Constante);
+	       Types.Conflit (Types.Ralentissement,Types.Constante);
+	       Types.Conflit (Types.Constante,Types.Constante)] in
   let table_conflits = Hashtbl.create 1000 in
-  let env = {Conflicts.dseparation=(distance_sep *. 64.); Conflicts.actions_to_test= all_possibilities} in
+  let env = {Conflicts.dseparation=(distance_sep *. 64.);
+	     Conflicts.all_actions = all_possibilities;
+	     Conflicts.actions_1_out = one_out;
+	     Conflicts.actions_2_out = two_out} in
   
   let filename = "exo2.txt" in
   (* creation des objets avions *)
@@ -45,3 +54,5 @@ let () =
       Backtrack.choix in
 
   Backtrack.affichage_branche solution
+
+
