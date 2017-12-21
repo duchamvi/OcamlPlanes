@@ -29,6 +29,9 @@ let () =
   (* creation des objets avions *)
   let liste_avions = Lecture.read_file filename num_airplane in
 
+  Printf.printf "\nDetection des conflits\n";
+  flush stdout;
+  
   (* detection *)
   let rec parcours_avions = fun liste_prevus liste_connus ->
     let ajout = fun a -> Conflicts.added_plane_detection a liste_connus env table_conflits in
@@ -41,7 +44,7 @@ let () =
   
   (* affichage *)
   Hashtbl.iter Types.affichage_conf table_conflits;
-  Printf.printf "\n";
+  Printf.printf "\nResolution des conflits\n";
   flush stdout;
 
   (* calcul de la solution *)
