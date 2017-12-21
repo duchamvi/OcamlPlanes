@@ -1,11 +1,11 @@
 # Makefile
-SOURCES = types.ml conflicts.ml
+SOURCES = types.ml lecture.ml  conflicts.ml backtrack.ml main.ml
 TARGET = prog
-OCAMLC = ocamlc -g
+OCAMLC = ocamlc str.cma unix.cma -g
 DEP = ocamldep
 OBJS = $(SOURCES:.ml=.cmo)
 
-all: .depend byte
+all: .depend byte clean
 
 byte: $(TARGET)
 
