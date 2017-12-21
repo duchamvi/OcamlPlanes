@@ -11,10 +11,12 @@ type trajectoire = {
     ralentie : point list;
     initiale : point list}
 
+		     
 type balises_avion = {
     nom_balise_avion : string;
     temps_passage : int}
 
+		       
 type avion = {
     nom : string ;
     liste_balises : balises_avion list;
@@ -23,11 +25,6 @@ type avion = {
     tp_secteur : int
   }
 
-type balise = {
-    nom_balise : string;
-    bx : int;
-    by : int;
-  }
 
 type action =
     Acceleration
@@ -176,26 +173,12 @@ let creer_balise_avion = fun liste_balise ->
     |x::xs -> balise_rec xs ({nom_balise_avion = fst x ; temps_passage = snd x}::liste_balise_avion) in
   balise_rec liste_balise [];;
 
-    
-
-
-let creer_balises = fun liste_balise ->
-  let liste_balises = ref [] in
-  for i=0 to List.length liste_balise - 1 do
-    liste_balises := List.append !liste_balises [{nom_balise = List.nth (List.nth liste_balise i) 0 ; bx = int_of_string (List.nth (List.nth liste_balise i) 1 ); by = int_of_string (List.nth (List.nth liste_balise i) 2)} ]
-  done;
-  !liste_balises;;
-
 
 let afficher_avion = fun avion ->
   Printf.printf "Nom : %s\n" avion.nom;
   List.iter (fun balise -> Printf.printf "Balise : %s %d\n" balise.nom_balise_avion balise.temps_passage) avion.liste_balises;
   List.iter (fun point4d-> Printf.printf "x = %d, y = %d , temps = %d , vx = %d, vy = %d \n " point4d.x point4d.y point4d.temps point4d.vx point4d.vy ) avion.trajectoires.initiale;;
 
-
-let afficher_balise = fun balise ->
-  Printf.printf "%s\n" balise.nom_balise;
-  Printf.printf "(%d,%d)\n" balise.bx balise.by;;
 
 let print_action = fun action ->
   match action with

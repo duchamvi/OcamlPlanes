@@ -1,9 +1,10 @@
-open Types
+(** Module de lecture du fichier rejeu *)
 
 let convert_time_sector = fun time ->
   let list_time = Str.split (Str.regexp ":") time in
-  3600 * int_of_string (List.nth list_time 0) + 60 * int_of_string (List.nth list_time 1);;  
+  3600 * int_of_string (List.nth list_time 0) + 60 * int_of_string (List.nth list_time 1)
 
+								   
 let select_sector = fun sector_list sector ->
   let rec select = fun liste ->
     match liste with
@@ -15,6 +16,7 @@ let select_sector = fun sector_list sector ->
       | [] -> -1
   in
   select sector_list
+	 
 
 let read_file = fun filename num_airplane ->
   let chan = open_in filename in
@@ -54,7 +56,7 @@ let read_file = fun filename num_airplane ->
 	let plane_beacons_line = Str.split (Str.regexp "[ \n\r\x0c\t]+") !new_line in
 	Printf.printf "*********** Airplane Beacons ********\n";
 	for i = 0 to ((List.length plane_beacons_line -1) / 5 - 1) do
-	  let one_beacon = [{nom_balise_avion = (List.nth plane_beacons_line (1+5*i)); temps_passage = (convert_time (List.nth plane_beacons_line (3+5*i)))}] in
+	  let one_beacon = [{Types.nom_balise_avion = (List.nth plane_beacons_line (1+5*i)); Types.temps_passage = (Types.convert_time (List.nth plane_beacons_line (3+5*i)))}] in
 	  airplane_beacons := List.append !airplane_beacons one_beacon;
 	done;	
       );
@@ -77,7 +79,7 @@ let read_file = fun filename num_airplane ->
 	done;
 	if !nb_plane >= num_airplane then
 	  end_plane := false;    
-	airplanes := List.append !airplanes [creer_avion !name !airplane_beacons !airplane_plots !time_sector];
+	airplanes := List.append !airplanes [Types.creer_avion !name !airplane_beacons !airplane_plots !time_sector];
 
       );
     done;
@@ -89,9 +91,9 @@ let read_file = fun filename num_airplane ->
     !airplanes;;
 
 
+(*
 
-
-(*let ()=
+let ()=
   let filename = "exo2.txt" in
   let num_airplane = 3 in
   let a = read_file filename num_airplane in

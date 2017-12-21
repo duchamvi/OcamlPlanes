@@ -38,7 +38,7 @@ let () =
   (* calcul de la solution *)
   let solution = Backtrack.backtrack
       avions_ajoutes
-      Backtrack.choose4
+      Backtrack.choose
       [|Types.Constante; Types.Ralentissement; Types.Acceleration|]
       Backtrack.conflit
       table_conflits
